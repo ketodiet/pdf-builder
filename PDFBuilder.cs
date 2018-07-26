@@ -683,7 +683,7 @@ namespace iText5PDFBuilder
                         leftSrcOffset = 0;
 
                         heightSrc = (height * widthSrc) / width;
-                        topSrcOffset = (src.Width - heightSrc) / 2.0f;
+                        topSrcOffset = (src.Height - heightSrc) / 2.0f;
                     }
 
                     using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(target))
