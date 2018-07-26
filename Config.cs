@@ -26,6 +26,9 @@ namespace iText5PDFBuilder
         public string imageUrl;
 
         [JsonProperty]
+        public string overlayUrl;
+
+        [JsonProperty]
         public string subHeader1;
 
         [JsonProperty]

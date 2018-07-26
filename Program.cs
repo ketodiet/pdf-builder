@@ -38,6 +38,7 @@ namespace iText5PDFBuilder
                 keywords = "keto,diet",
                 creator = "itext5 + ketodietapp.com",
                 imageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1920px-The_Earth_seen_from_Apollo_17.jpg",
+                overlayUrl = "https://files.ketodietapp.com/Blog/files/PDFMaker/PDFMakerOverlay-1.png",
                 subHeader1 = "header1",
                 subHeader2 = "header2",
                 body = "This is the body text",

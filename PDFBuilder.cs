@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -327,11 +328,7 @@ namespace iText5PDFBuilder
                     }
                     else if (IsLineBreakingTag(tag))
                     {
-                        ctx.EatText(cleanPara, elements);
-                        sb.Clear();
-
-                        ctx.CreateParagraph(Html2PdfContext.ParaStyle.Body, elements);
-                        ctx.PushChunkFontSize(ctx.bodyFont.Size);
+                        sb.Append("\n");
                     }
                 }
                 else
@@ -505,13 +502,17 @@ namespace iText5PDFBuilder
                     //
                     // Cover Image
                     //
-                    Image coverImage = Image.GetInstance(new Uri(config.imageUrl), true);
-                    if (coverImage != null)
+                    System.Drawing.Image sysCoverImage = CreateCoverImage(config.imageUrl, config.overlayUrl, headerImageWidth * 4, headerImageHeight * 4);
+                    if (sysCoverImage != null)
                     {
-                        coverImage.SetAbsolutePosition(document.PageSize.Width - headerImageWidth, document.PageSize.Height - headerImageHeight);
-                        coverImage.ScaleToFit(headerImageWidth, headerImageHeight);
+                        iTextSharp.text.Image coverImage = iTextSharp.text.Image.GetInstance(sysCoverImage, System.Drawing.Imaging.ImageFormat.Jpeg);
+                        if (coverImage != null)
+                        {
+                            coverImage.SetAbsolutePosition(document.PageSize.Width - headerImageWidth, document.PageSize.Height - headerImageHeight);
+                            coverImage.ScaleToFit(headerImageWidth, headerImageHeight);
 
-                        document.Add(coverImage);
+                            document.Add(coverImage);
+                        }
                     }
 
                     ColumnText ct = new ColumnText(writer.DirectContent);
@@ -629,6 +630,86 @@ namespace iText5PDFBuilder
             return true;
         }
 
+        private static System.Drawing.Bitmap BitmapFromURL(string imageUrl)
+        {
+            using (WebClient wc = new WebClient())
+            {
+                using (Stream s = wc.OpenRead(imageUrl))
+                {
+                    return new System.Drawing.Bitmap(s);
+                }
+            }
+        }
+
+        private static float GetBitmapApectRatio(System.Drawing.Bitmap bmp)
+        {
+            return (bmp.Height == 0) ? 0 : ((float)bmp.Width / (float)bmp.Height);
+        }
+
+        private static System.Drawing.Image CreateCoverImage(string imageUrl, string overlayUrl, float width, float height)
+        {
+            try
+            {
+                using (System.Drawing.Bitmap src = BitmapFromURL(imageUrl))
+                using (System.Drawing.Bitmap overlay = BitmapFromURL(overlayUrl))
+                {
+                    System.Drawing.Rectangle cropRect = new System.Drawing.Rectangle(0, 0, (int)Math.Round(width), (int)Math.Round(height));
+                    System.Drawing.Bitmap target = new System.Drawing.Bitmap(cropRect.Width, cropRect.Height);
+
+                    float leftSrcOffset = 0;
+                    float topSrcOffset = 0;
+                    float widthSrc = 0;
+                    float heightSrc = 0;
+
+                    if (GetBitmapApectRatio(src) > GetBitmapApectRatio(target))
+                    {
+                        //
+                        // source is wider
+                        //
+
+                        heightSrc = src.Height;
+                        topSrcOffset = 0;
+
+                        widthSrc = (width * heightSrc) / height;
+                        leftSrcOffset = (src.Width - widthSrc) / 2.0f;
+                    }
+                    else
+                    {
+                        //
+                        // source is taller
+                        //
+
+                        widthSrc = src.Width;
+                        leftSrcOffset = 0;
+
+                        heightSrc = (height * widthSrc) / width;
+                        topSrcOffset = (src.Width - heightSrc) / 2.0f;
+                    }
+
+                    using (System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(target))
+                    {
+                        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                        g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
+                        g.DrawImage(src, cropRect, 
+                                            new System.Drawing.RectangleF(leftSrcOffset, topSrcOffset, widthSrc, heightSrc),
+                                            System.Drawing.GraphicsUnit.Pixel);
+
+                        g.DrawImage(overlay, cropRect,
+                                            new System.Drawing.RectangleF(0, 0, overlay.Width, overlay.Height),
+                                            System.Drawing.GraphicsUnit.Pixel);
+                    }
+
+                    return target;
+                }
+            }
+            catch
+            {
+            }
+
+            return null;
+        }
     }
 
 }
